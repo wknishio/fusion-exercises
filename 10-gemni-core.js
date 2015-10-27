@@ -8,7 +8,7 @@ var gemni_fusiontables_proxy_url = 'https://script.google.com/macros/s/AKfycbzib
 window['gemni_oauth2_url'] = 'https://accounts.google.com/o/oauth2/auth';
 window['gemni_oauth2_client_id'] = '1050962967129-23bddqdtu08rr7sr1h8aqci6sre0n98k.apps.googleusercontent.com';
 window['gemni_oauth2_scopes'] = ['https://www.googleapis.com/auth/fusiontables', 'https://www.googleapis.com/auth/userinfo.profile'];
-window['gemni_api_key'] = 'AIzaSyBCtOJekpZmo0yLArsg0N00yQgELV4Z8S4';
+window['gemni_api_key'] = 'AIzaSyCwHQfggo_jNp2pA9FjzR4BkCk38yuNuwI';
 window['gemni_fusiontables_api'] = 'https://www.googleapis.com/fusiontables/v2/query';
 window['gemni_fusiontables_scope'] = 'https://www.googleapis.com/auth/fusiontables';
 window['gemni_oauth2_request'] =
@@ -52,6 +52,7 @@ var gemni_loaded_url = false;
 //var gemni_test_data_access = window['gemni_test_data_access'];
 window['gemni_must_test_data_access'] = false;
 var gemni_has_data_access = false;
+//var gemni_oauth2_token_ok = false;
 var gemni_geocoder = new google.maps.Geocoder();
 var gemni_map_geocoder_marker;
 var gemni_map_geocoder_marker_context_menu;
@@ -594,10 +595,10 @@ function gemni_submit_editorwindow(form)
 	{
 		gemni_update_marker_contents(marker, date, address, comments, title, contact, access, cost, dayperiods, weekdays, modalities);
 	}
-	//marker.setDraggable(false);
-	//marker.getBrother().setDraggable(false);
-	//marker.getEditorWindow().setWindowState(false);
-	//marker.getEditorWindow().close();
+	marker.setDraggable(false);
+	marker.getBrother().setDraggable(false);
+	marker.getEditorWindow().setWindowState(false);
+	marker.getEditorWindow().close();
 	return false;
 }
 
@@ -2565,7 +2566,7 @@ function gemni_update_marker_contents(marker, date, address, comments, title, co
 	gemni_set_marker_contents(marker, date, address, comments, title);
 }*/
 
-function gemni_update_marker_contents_callback()
+function gemni_update_marker_contents_callback(response, parameters)
 {
 	
 }
@@ -4869,7 +4870,7 @@ function gemni_save_cookie_from_url(values)
 	//alert("save-cookie: " + cookie);
 	//alert('url: ' + 'gemni.project.state.' + gemni_fusiontables_data_source);
 	//alert('url: ' + cookie);
-	gemni_create_cookie('gemni.project.state.' + gemni_fusiontables_data_source, cookie, 15);
+	gemni_create_cookie('gemni.project.state.' + gemni_fusiontables_data_source, cookie, 1);
 }
 
 function gemni_save_cookie()
@@ -4935,7 +4936,7 @@ function gemni_save_cookie()
 	//alert("save-cookie: " + cookie);
 	//alert('normal: ' + 'gemni.project.state.' + gemni_fusiontables_data_source);
 	//alert(cookie);
-	gemni_create_cookie('gemni.project.state.' + gemni_fusiontables_data_source, cookie, 15);
+	gemni_create_cookie('gemni.project.state.' + gemni_fusiontables_data_source, cookie, 1);
 }
 
 function gemni_get_url_vars()
@@ -5211,7 +5212,14 @@ function gemni_test_data_source_callback(data, parameters)
 	if (data)
 	{
 		//gemni_fusiontables_data_source = gemni_fusiontables_data_source;
-		//alert(data.toString());
+		if (!data['rows'])
+		{
+			//alert('test failed');
+		}
+		else
+		{
+			//alert('test ok');
+		}
 		if (!gemni_main_div)
 		{
 			gemni_start();
@@ -5237,11 +5245,14 @@ function gemni_test_data_access()
 
 function gemni_test_data_access_callback(result, parameters)
 {
-	//alert("result: [" + result + "]");
+	//alert("gemni_test_data_access_callback result: [" + result + "]");
 	//gemni_has_data_access = true;
 	if (result != null)
 	{
-		gemni_has_data_access = true;
+		if (result['rows'])
+		{
+			gemni_has_data_access = true;
+		}
 	}
 	else if (window['gemni_client'] == window)
 	{
@@ -5250,6 +5261,14 @@ function gemni_test_data_access_callback(result, parameters)
 			runSecureSelect("SHOW TABLES", "test_secure_select_callback");
 		}*/
 		gemni_has_data_access = true;
+	}
+	if (!gemni_has_data_access)
+	{
+		if (window['gemni_oauth2_refresh'])
+		{
+			clearTimeout(window['gemni_oauth2_refresh']);
+			window['gemni_oauth2_refresh'] = null;
+		}
 	}
 	//alert(result);
 	gemni_test_data_source(gemni_fusiontables_data_source);
@@ -5499,7 +5518,7 @@ function gemni_run_select(query, callback, parameters)
 {
 	var url = gemni_fusiontables_api;
 	var data_values;
-	if (window['gemni_oauth2_token'])
+	if (window['gemni_oauth2_token'] && gemni_has_data_access)
 	{
 		/*try
 		{
@@ -5568,7 +5587,7 @@ function gemni_run_update(query, callback, parameters)
 	var url = gemni_fusiontables_api;
 	var data_values;
 	var headers_values;
-	if (window['gemni_oauth2_token'])
+	if (window['gemni_oauth2_token'] && gemni_has_data_access)
 	{
 		//try
 		//{
@@ -5806,7 +5825,7 @@ function gemni_build_marker(map, latlng, drag, cursor, color)
 		map: map,
 		cursor: cursor,
 		/*shadow: gemni_icon_shadow,*/
-		icon: gemni_get_marker_image(color),
+		icon: image(color),
 		/*shape: gemni_icon_shape,*/
 		draggable: drag
 	}
