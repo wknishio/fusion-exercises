@@ -1,0 +1,204 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta names="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>
+Fusion Exercises
+</title>
+<link rel="stylesheet" type="text/css" media="all" href="gemni-style.css">
+<link rel="stylesheet" type="text/css" media="print" href="gemni-print.css">
+<link rel="stylesheet" type="text/css" media="all" href="jquery.autocomplete.css">
+<link rel="stylesheet" type="text/css" media="all" href="gemni-calendar-blue.css" title="blue">
+<link rel="shortcut icon" href="favicon.ico">
+
+<script type="text/javascript" src="l10n.js"/></script>
+<script type="text/javascript" src="localizations.js"/></script>
+<script type="text/javascript" src="jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="jquery.autocomplete.js"></script>
+<script type="text/javascript" src="gwt-oauth2.js"/></script>
+
+<script type="text/javascript" src="https://apis.google.com/js/client.js"></script>
+<!-- <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=true&libraries=geometry,places,drawing,weather&signed_in=true"></script>  -->
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=true&libraries=geometry,places,drawing,weather"></script>
+
+<script type="text/javascript" src="1-gemni-calendar.js"/></script>
+<script type="text/javascript" src="2-gemni-calendar-setup.js"/></script>
+<script type="text/javascript" src="3-gemni-calendar-i10n.js"/></script>
+<script type="text/javascript" src="4-gemni-infobubble.js"/></script>
+<script type="text/javascript" src="5-gemni-prototypes.js"/></script>
+<script type="text/javascript" src="6-gemni-menus.js"/></script>
+<script type="text/javascript" src="7-gemni-markerclustererplus.js"/></script>
+<script type="text/javascript" src="8-gemni-geo.js"/></script>
+<script type="text/javascript" src="9-gemni-longclick.js"/></script>
+<script type="text/javascript" src="10-gemni-core.js"/></script>
+
+<script type="text/javascript">
+
+//google.setOnLoadCallback(wait_applet_load);
+
+//google.load('gdata', '2.x');
+
+function gemni_logout()
+{
+	//oauth2.clearAllTokens();
+	gemni_oauth2_revoke_token(window['gemni_oauth2_token']);
+}
+
+function gemni_load()
+{
+	//alert('wait_applet_load');
+	if (window.location.href.indexOf("https:") == -1)
+	{
+		window.location.href = "https://" + window.location.host + window.location.pathname;
+		//window.location.reload();
+		return;
+	}
+	else
+	{
+		gapi.auth.init(gemni_oauth2_login)
+	}
+	
+	/*if (!document.gemni_client)
+	{
+		setTimeout(wait_applet_load, 125);
+		return;
+	}
+	try
+	{
+		if (!document.gemni_client.getStarted())
+		{
+			setTimeout(wait_applet_load, 125);
+			return;
+		}
+	}
+	catch (e)
+	{
+		//alert('exception!');
+		setTimeout(wait_applet_load, 125);
+		return;
+	}*/
+	//gdata_load();
+	//gapi.auth.init(oauth2_login);
+	//gapi.client.load('oauth2', 'v2', oauth2_login);
+	//document.gemni_client.setToken(gemni_authsub_token);
+}
+
+function gemni_oauth2_init_callback(token)
+{
+	//alert(token);
+	if (token.access_token)
+	{
+		//alert('immediate == true');
+		window['gemni_oauth2_token'] = token.access_token;
+		window['gemni_must_test_data_access'] = true;
+		window['gemni_need_logout_button'] = true;
+		//window['gemni_client'] = window;
+		var expires_in = parseInt(token.expires_in) * 1000 - (60 * 1000);
+		if (expires_in > 0)
+		{
+			window['gemni_oauth2_refresh'] = setTimeout(function() {gapi.auth.authorize({client_id: window['gemni_oauth2_client_id'], immediate: true, scope: 'https://www.googleapis.com/auth/fusiontables https://www.googleapis.com/auth/userinfo.profile'}, gemni_oauth2_refresh_callback);}, expires_in);
+		}
+		else
+		{
+			setTimeout(function() {gapi.auth.authorize({client_id: window['gemni_oauth2_client_id'], immediate: true, scope: 'https://www.googleapis.com/auth/fusiontables https://www.googleapis.com/auth/userinfo.profile'}, gemni_oauth2_refresh_callback);}, 500);
+		}
+		gemni_initialize();
+	}
+	else
+	{
+		//alert('immediate == false');
+		setTimeout(function() {gapi.auth.authorize({client_id: window['gemni_oauth2_client_id'], immediate: false, scope: 'https://www.googleapis.com/auth/fusiontables https://www.googleapis.com/auth/userinfo.profile'}, gemni_oauth2_init_callback);}, 500);
+	}
+}
+
+function gemni_oauth2_login()
+{
+	//alert('oauth2_login');
+	//oauth2.login(window['gemni_oauth2_request'], oauth2_success_callback, oauth2_error_callback);
+	gapi.client.setApiKey(window['gemni_api_key']);
+	setTimeout(function() {gapi.auth.authorize({client_id: window['gemni_oauth2_client_id'], immediate: true, scope: 'https://www.googleapis.com/auth/fusiontables https://www.googleapis.com/auth/userinfo.profile'}, gemni_oauth2_init_callback);}, 500);
+	//setTimeout(function() {gapi.auth.authorize({client_id: window['gemni_oauth2_client_id'], immediate: true, scope: 'https://www.googleapis.com/auth/fusiontables https://www.googleapis.com/auth/userinfo.profile'}, oauth2_init_callback);}, 500);
+	//if (!window['gemni_oauth2_token'])
+	//{
+		//setTimeout(oauth2_login, 500);
+	//}
+}
+
+function gemni_oauth2_revoke_token(token)
+{
+	var url = 'https://accounts.google.com/o/oauth2/revoke';
+	var data_values;
+	data_values = {token: token};
+	jQuery.ajax(url, {data: data_values, success: gemni_oauth2_revoke_success_callback, error: gemni_oauth2_revoke_error_callback, contentType: 'text/plain; charset=UTF-8'});
+}
+
+function gemni_oauth2_revoke_success_callback(data, status, request)
+{
+	//alert(data);
+	//alert(status);
+	window.location.reload();
+	/*if (window['gemni_oauth2_token'])
+	{
+		try
+		{
+			if (!(oauth2.expiresIn(window['gemni_oauth2_request']) > 0))
+			{
+				window.location.reload();
+			}
+			else
+			{
+				
+			}
+		}
+		catch (e)
+		{
+			window.location.reload();
+		}
+	}*/
+	//window.location.reload();
+}
+
+function gemni_oauth2_revoke_error_callback(request, status, error)
+{
+	//alert(status);
+	//alert(error);
+	window.location.reload();
+	/*if (window['gemni_oauth2_token'])
+	{
+		try
+		{
+			if (!(oauth2.expiresIn(window['gemni_oauth2_request']) > 0))
+			{
+				window.location.reload();
+			}
+			else
+			{
+				
+			}
+		}
+		catch (e)
+		{
+			window.location.reload();
+		}
+	}*/
+}
+
+</script>
+</head>
+<body onload="gemni_load()" onunload="gemni_logout()">
+<!-- <div id="gemni_content_canvas" style="width:100%; height:100%;"> -->
+<div id="gemni_main_canvas" style="display:inline; width:100%; height:100%;">
+<div id="gemni_map_canvas" style="display:block; width:50%; height:100%; position:absolute; left:0px;"></div>
+<div id="gemni_panorama_canvas" style="display:block; width:50%; height:100%; position:absolute; right:0px; z-index:0;"></div>
+</div>
+<!-- </div> -->
+<!--
+<div id="applet_canvas" style="width:0; height:0">
+<applet name="GEMNI-Client" id="gemni_client" archive="fusion-tables-applet-client.jar" code="gnu.fusiontables.gemni.FusionTablesAppletClient.class" width="0" height="0" mayscript>
+<param name="initial_focus" value="false">
+</applet>
+</div>
+-->
+</body>
+</html>
